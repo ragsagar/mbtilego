@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -22,6 +23,7 @@ func GetTileList(xmin float64, ymin float64, xmax float64, ymax float64, zoomlev
 }
 
 func main() {
+	runtime.GOMAXPROCS(2)
 	xmin := 55.397945
 	ymin := 25.291090
 	xmax := 55.402741
@@ -38,6 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	err = setupMBTileTables(db)
 	if err != nil {
@@ -52,12 +55,11 @@ func main() {
 		go tileFetcher(inputPipe, tilePipe)
 	}
 
-	for w := 0; w < 10; w++ {
+	for w := 0; w < 1; w++ {
 		go mbTileWorker(db, tilePipe, outputPipe)
 	}
 
 	for _, tile := range tiles {
-		fmt.Println("Sending")
 		inputPipe <- tile
 	}
 
@@ -65,12 +67,6 @@ func main() {
 	for i := 0; i < len(tiles); i++ {
 		<-outputPipe
 	}
-
-	// for i := 0; i < len(tiles); i++ {
-	// 	fmt.Println("Reading pipe")
-	// 	newTile := <-outPipe
-	// 	fmt.Println("Size of ", len(newTile.Content))
-	// }
 
 	err = optimizeDatabase(db)
 	if err != nil {
@@ -96,7 +92,6 @@ func mbTileWorker(db *sql.DB, tilePipe chan Tile, outputPipe chan Tile) {
 }
 
 func addToMBTile(tile Tile, db *sql.DB) error {
-	fmt.Println("Saving to db")
 	_, err := db.Exec("insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?);", tile.z, tile.x, tile.y, tile.Content)
 	if err != nil {
 		return err
@@ -115,7 +110,6 @@ func tileFetcher(inputPipe chan *gosm.Tile, tilePipe chan Tile) {
 func fetchTile(z, x, y int) Tile {
 	tile := Tile{}
 	tile_url := getTileUrl(z, x, y)
-	fmt.Println(tile_url)
 	resp, err := http.Get(tile_url)
 	if err != nil {
 		log.Fatal("Error in fetching tile")
