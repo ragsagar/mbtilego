@@ -2,12 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"github.com/j4/gosm"
 	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"runtime"
@@ -20,59 +20,6 @@ func GetTileList(xmin float64, ymin float64, xmax float64, ymax float64, zoomlev
 	t2 := gosm.NewTileWithLatLong(xmin, ymin, zoomlevel)
 	tiles, err := gosm.BBoxTiles(*t1, *t2)
 	return tiles, err
-}
-
-func main() {
-	runtime.GOMAXPROCS(2)
-	xmin := 55.397945
-	ymin := 25.291090
-	xmax := 55.402741
-	ymax := 25.292889
-	nbtiles := math.Abs((float64(xmax))-float64(xmin)) + math.Abs(float64(ymax)-float64(ymin))
-	fmt.Println("Nbtiles ", nbtiles)
-	tiles, err := GetTileList(xmin, ymin, xmax, ymax, 18)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("Number of tiles ", len(tiles))
-
-	db, err := prepareDatabase()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	err = setupMBTileTables(db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	inputPipe := make(chan *gosm.Tile, len(tiles))
-	tilePipe := make(chan Tile, len(tiles))
-	outputPipe := make(chan Tile, len(tiles))
-
-	for w := 0; w < 20; w++ {
-		go tileFetcher(inputPipe, tilePipe)
-	}
-
-	for w := 0; w < 1; w++ {
-		go mbTileWorker(db, tilePipe, outputPipe)
-	}
-
-	for _, tile := range tiles {
-		inputPipe <- tile
-	}
-
-	// Waiting to complete the creation of db.
-	for i := 0; i < len(tiles); i++ {
-		<-outputPipe
-	}
-
-	err = optimizeDatabase(db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 }
 
 type Tile struct {
@@ -130,9 +77,9 @@ func getTileUrl(z, x, y int) string {
 	return tile_url
 }
 
-func prepareDatabase() (*sql.DB, error) {
-	os.Remove("./test.mbutil")
-	db, err := sql.Open("sqlite3", "./test.mbutil")
+func prepareDatabase(filename string) (*sql.DB, error) {
+	os.Remove(filename)
+	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		return nil, err
 	}
@@ -197,4 +144,69 @@ func optimizeDatabase(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func main() {
+	runtime.GOMAXPROCS(2)
+	// xmin := 55.397945
+	// ymin := 25.291090
+	// xmax := 55.402741
+	// ymax := 25.292889
+	var xmin, ymin, xmax, ymax float64
+	var zoomlevel int
+	var filename string
+	flag.Float64Var(&xmin, "xmin", 55.397945, "Minimum longitude")
+	flag.Float64Var(&xmax, "xmax", 55.402741, "Maximum longitude")
+	flag.Float64Var(&ymin, "ymin", 25.291090, "Minimum latitude")
+	flag.Float64Var(&ymax, "ymax", 25.292889, "Maximum latitude")
+	flag.StringVar(&filename, "filename", "/path/to/file.mbtile", "Output file to generate")
+	flag.IntVar(&zoomlevel, "zoomlevel", 19, "Zoom level")
+	flag.Parse()
+
+	// nbtiles := math.Abs((float64(xmax))-float64(xmin)) + math.Abs(float64(ymax)-float64(ymin))
+	// fmt.Println("Nbtiles ", nbtiles)
+
+	tiles, err := GetTileList(xmin, ymin, xmax, ymax, zoomlevel)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Number of tiles ", len(tiles))
+
+	db, err := prepareDatabase(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	err = setupMBTileTables(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	inputPipe := make(chan *gosm.Tile, len(tiles))
+	tilePipe := make(chan Tile, len(tiles))
+	outputPipe := make(chan Tile, len(tiles))
+
+	for w := 0; w < 20; w++ {
+		go tileFetcher(inputPipe, tilePipe)
+	}
+
+	for w := 0; w < 1; w++ {
+		go mbTileWorker(db, tilePipe, outputPipe)
+	}
+
+	for _, tile := range tiles {
+		inputPipe <- tile
+	}
+
+	// Waiting to complete the creation of db.
+	for i := 0; i < len(tiles); i++ {
+		<-outputPipe
+	}
+
+	err = optimizeDatabase(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
