@@ -26,6 +26,11 @@ type Tile struct {
 	Content []byte
 }
 
+func (tile *Tile) flipped_y() int {
+	two_power_zoom := math.Pow(2.0, float64(tile.z))
+	return int(two_power_zoom) - 1 - tile.y
+}
+
 type Projection struct {
 	Bc, Cc, Ac             []float64
 	Zc                     [][]float64
@@ -70,15 +75,16 @@ func (proj *Projection) TileList() []Tile {
 		xrangeStart := int(px0[0] / DEFAULT_TILE_SIZE)
 		xrangeEnd := int(px1[0] / DEFAULT_TILE_SIZE)
 		for x := xrangeStart; x <= xrangeEnd; x++ {
-			if x < 0 || float64(x) > two_power_zoom {
+			if x < 0 || float64(x) >= two_power_zoom {
 				continue
 			}
 			yrangeStart := int(px0[1] / DEFAULT_TILE_SIZE)
 			yrangeEnd := int(px1[1] / DEFAULT_TILE_SIZE)
 			for y := yrangeStart; y <= yrangeEnd; y++ {
-				if y < 0 || float64(y) > two_power_zoom {
+				if y < 0 || float64(y) >= two_power_zoom {
 					continue
 				}
+				// y = (int(two_power_zoom) - 1) - y
 				tilelist = append(tilelist, Tile{z: zoom, x: x, y: y})
 			}
 		}
@@ -99,7 +105,7 @@ func mbTileWorker(db *sql.DB, tilePipe chan Tile, outputPipe chan Tile) {
 }
 
 func addToMBTile(tile Tile, db *sql.DB) error {
-	_, err := db.Exec("insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?);", tile.z, tile.x, tile.y, tile.Content)
+	_, err := db.Exec("insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?);", tile.z, tile.x, tile.flipped_y(), tile.Content)
 	if err != nil {
 		return err
 	}
