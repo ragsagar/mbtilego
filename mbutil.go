@@ -49,12 +49,10 @@ func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel int) *Projection {
 		proj.Ac = append(proj.Ac, c)
 		c = c * 2
 	}
-	fmt.Println(proj.levels)
 	return &proj
 }
 
 func (proj *Projection) project_pixels(x, y float64, zoom int) []float64 {
-	fmt.Println(zoom)
 	d := proj.Zc[zoom]
 	e := Round(d[0] + x*proj.Bc[zoom])
 	f := minMax(math.Sin(DEG_TO_RAD*y), -0.9999, 0.9999)
@@ -69,7 +67,6 @@ func (proj *Projection) TileList() []Tile {
 		two_power_zoom := math.Pow(2, float64(zoom))
 		px0 := proj.project_pixels(proj.xmin, proj.ymax, zoom) // left top
 		px1 := proj.project_pixels(proj.xmax, proj.ymin, zoom) // right bottom
-		fmt.Println(px0, px1)
 		xrangeStart := int(px0[0] / DEFAULT_TILE_SIZE)
 		xrangeEnd := int(px1[0] / DEFAULT_TILE_SIZE)
 		for x := xrangeStart; x <= xrangeEnd; x++ {
@@ -226,7 +223,6 @@ func main() {
 	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel)
 	tiles := proj.TileList()
 	fmt.Println("Number of tiles ", len(tiles))
-	fmt.Println(tiles)
 
 	db, err := prepareDatabase(filename)
 	if err != nil {
