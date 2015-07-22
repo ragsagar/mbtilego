@@ -21,6 +21,8 @@ const MAX_LATITUDE = 85.0511287798
 const DEFAULT_TILE_SIZE = 256
 const MAX_ZOOM_LEVEL = 17
 
+var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"}
+
 type Tile struct {
 	z, x, y int
 	Content []byte
@@ -112,17 +114,18 @@ func addToMBTile(tile Tile, db *sql.DB) error {
 	return nil
 }
 
-func tileFetcher(inputPipe chan Tile, tilePipe chan Tile) {
+func tileFetcher(inputPipe chan Tile, tilePipe chan Tile, maptype int) {
+	url_format := MAPTYPES[maptype]
 	for {
 		tile := <-inputPipe
-		tileObj := fetchTile(tile.z, tile.x, tile.y)
+		tileObj := fetchTile(tile.z, tile.x, tile.y, url_format)
 		tilePipe <- tileObj
 	}
 }
 
-func fetchTile(z, x, y int) Tile {
+func fetchTile(z, x, y int, url_format string) Tile {
 	tile := Tile{}
-	tile_url := getTileUrl(z, x, y)
+	tile_url := getTileUrl(z, x, y, url_format)
 	resp, err := http.Get(tile_url)
 	if err != nil {
 		log.Fatal("Error in fetching tile")
@@ -135,9 +138,8 @@ func fetchTile(z, x, y int) Tile {
 	return tile
 }
 
-func getTileUrl(z, x, y int) string {
-	url_format := "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-	url_format = "http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+func getTileUrl(z, x, y int, url_format string) string {
+	// url_format = "http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
 	tile_url := strings.Replace(url_format, "{x}", strconv.Itoa(x), -1)
 	tile_url = strings.Replace(tile_url, "{y}", strconv.Itoa(y), -1)
 	tile_url = strings.Replace(tile_url, "{z}", strconv.Itoa(z), -1)
@@ -216,7 +218,7 @@ func optimizeDatabase(db *sql.DB) error {
 func main() {
 	runtime.GOMAXPROCS(2)
 	var xmin, ymin, xmax, ymax float64
-	var zoomlevel int
+	var zoomlevel, maptype int
 	var filename string
 
 	flag.Float64Var(&xmin, "xmin", 55.397945, "Minimum longitude")
@@ -225,6 +227,7 @@ func main() {
 	flag.Float64Var(&ymax, "ymax", 25.292889, "Maximum latitude")
 	flag.StringVar(&filename, "filename", "/path/to/file.mbtile", "Output file to generate")
 	flag.IntVar(&zoomlevel, "zoomlevel", 19, "Zoom level")
+	flag.IntVar(&maptype, "maptype", 0, "0 for Google, 1 for OSM")
 	flag.Parse()
 
 	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel)
@@ -247,7 +250,7 @@ func main() {
 	outputPipe := make(chan Tile, len(tiles))
 
 	for w := 0; w < 20; w++ {
-		go tileFetcher(inputPipe, tilePipe)
+		go tileFetcher(inputPipe, tilePipe, maptype)
 	}
 
 	for w := 0; w < 1; w++ {
