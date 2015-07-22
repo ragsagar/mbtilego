@@ -19,7 +19,7 @@ const DEG_TO_RAD = math.Pi / 180
 const RAD_TO_DEG = 180 / math.Pi
 const MAX_LATITUDE = 85.0511287798
 const DEFAULT_TILE_SIZE = 256
-const MAX_ZOOM_LEVEL = 19
+const MAX_ZOOM_LEVEL = 17
 
 type Tile struct {
 	z, x, y int
@@ -137,6 +137,7 @@ func fetchTile(z, x, y int) Tile {
 
 func getTileUrl(z, x, y int) string {
 	url_format := "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+	url_format = "http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
 	tile_url := strings.Replace(url_format, "{x}", strconv.Itoa(x), -1)
 	tile_url = strings.Replace(tile_url, "{y}", strconv.Itoa(y), -1)
 	tile_url = strings.Replace(tile_url, "{z}", strconv.Itoa(z), -1)
@@ -228,7 +229,7 @@ func main() {
 
 	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel)
 	tiles := proj.TileList()
-	fmt.Println("Number of tiles ", len(tiles))
+	fmt.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", MAX_ZOOM_LEVEL, "  Number of tiles ", len(tiles))
 
 	db, err := prepareDatabase(filename)
 	if err != nil {
@@ -266,6 +267,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("Generated ", filename)
 
 }
 
