@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
 	"log"
@@ -232,7 +231,7 @@ func main() {
 
 	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel)
 	tiles := proj.TileList()
-	fmt.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", MAX_ZOOM_LEVEL, "  Number of tiles ", len(tiles))
+	log.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", MAX_ZOOM_LEVEL, "  Number of tiles ", len(tiles))
 
 	db, err := prepareDatabase(filename)
 	if err != nil {
@@ -270,7 +269,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Generated ", filename)
+	log.Println("Generated ", filename)
 
 }
 
