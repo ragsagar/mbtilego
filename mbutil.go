@@ -39,15 +39,15 @@ type Projection struct {
 	xmin, ymin, xmax, ymax float64
 }
 
-func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel int) *Projection {
+func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel, max_zoomlevel int) *Projection {
 	proj := Projection{xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax}
-	for i := zoomlevel; i <= MAX_ZOOM_LEVEL; i++ {
+	for i := zoomlevel; i <= max_zoomlevel; i++ {
 		proj.levels = append(proj.levels, i)
 	}
 
 	var e float64
 	var c = float64(DEFAULT_TILE_SIZE)
-	for i := 0; i <= MAX_ZOOM_LEVEL; i++ {
+	for i := 0; i <= max_zoomlevel; i++ {
 		e = c / 2.0
 		proj.Bc = append(proj.Bc, c/360.0)
 		proj.Cc = append(proj.Cc, c/(2.0*math.Pi))
@@ -217,7 +217,7 @@ func optimizeDatabase(db *sql.DB) error {
 func main() {
 	runtime.GOMAXPROCS(2)
 	var xmin, ymin, xmax, ymax float64
-	var zoomlevel, maptype int
+	var zoomlevel, maptype, max_zoomlevel int
 	var filename string
 
 	flag.Float64Var(&xmin, "xmin", 55.397945, "Minimum longitude")
@@ -227,11 +227,12 @@ func main() {
 	flag.StringVar(&filename, "filename", "/path/to/file.mbtile", "Output file to generate")
 	flag.IntVar(&zoomlevel, "zoomlevel", 19, "Zoom level")
 	flag.IntVar(&maptype, "maptype", 0, "0 for Google, 1 for OSM")
+	flag.IntVar(&max_zoomlevel, "max_zoomlevel", MAX_ZOOM_LEVEL, "Maximum zoomlevel to which tiles should be added")
 	flag.Parse()
 
-	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel)
+	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel, max_zoomlevel)
 	tiles := proj.TileList()
-	log.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", MAX_ZOOM_LEVEL, "  Number of tiles ", len(tiles))
+	log.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", max_zoomlevel, "  Number of tiles ", len(tiles))
 
 	db, err := prepareDatabase(filename)
 	if err != nil {
