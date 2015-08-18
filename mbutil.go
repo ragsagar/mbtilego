@@ -20,7 +20,7 @@ const MAX_LATITUDE = 85.0511287798
 const DEFAULT_TILE_SIZE = 256
 const MAX_ZOOM_LEVEL = 17
 
-var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"}
+var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png", "http://a.tiles.mapbox.com/v4/rsagar.n724o8le/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicnNhZ2FyIiwiYSI6IjM5OWVlZTVlYzJiYjhmMzAyMGMwMDBiYzA4NjEzMWM3In0.gc0JW6Ddp0RD_yBaaPE1vg"}
 
 type Tile struct {
 	z, x, y int
@@ -226,7 +226,7 @@ func main() {
 	flag.Float64Var(&ymax, "ymax", 25.292889, "Maximum latitude")
 	flag.StringVar(&filename, "filename", "/path/to/file.mbtile", "Output file to generate")
 	flag.IntVar(&zoomlevel, "zoomlevel", 19, "Zoom level")
-	flag.IntVar(&maptype, "maptype", 0, "0 for Google, 1 for OSM")
+	flag.IntVar(&maptype, "maptype", 0, "0 for Google, 1 for OSM, 2 for mapbox satellite street")
 	flag.IntVar(&max_zoomlevel, "max_zoomlevel", MAX_ZOOM_LEVEL, "Maximum zoomlevel to which tiles should be added")
 	flag.Parse()
 
