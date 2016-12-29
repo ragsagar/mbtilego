@@ -9,9 +9,11 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 const DEG_TO_RAD = math.Pi / 180
@@ -215,10 +217,19 @@ func optimizeDatabase(db *sql.DB) error {
 }
 
 func main() {
-	runtime.GOMAXPROCS(2)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	var xmin, ymin, xmax, ymax float64
 	var zoomlevel, maptype, max_zoomlevel int
 	var filename string
+
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		log.Println("Exit signal received.")
+		log.Println(sig)
+	}()
 
 	flag.Float64Var(&xmin, "xmin", 55.397945, "Minimum longitude")
 	flag.Float64Var(&xmax, "xmax", 55.402741, "Maximum longitude")
