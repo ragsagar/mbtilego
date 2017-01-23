@@ -17,7 +17,7 @@ import (
 	"strings"
 	"syscall"
 )
-
+const VERSION = "0.2.0"
 const DEG_TO_RAD = math.Pi / 180
 const RAD_TO_DEG = 180 / math.Pi
 const MAX_LATITUDE = 85.0511287798
@@ -30,6 +30,7 @@ const PNG_EXTENSION = "png"
 const MBTILE_VERSION = "1.2"
 
 var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png", "http://a.tiles.mapbox.com/v4/rsagar.n724o8le/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicnNhZ2FyIiwiYSI6IjM5OWVlZTVlYzJiYjhmMzAyMGMwMDBiYzA4NjEzMWM3In0.gc0JW6Ddp0RD_yBaaPE1vg"}
+var MAP_IMAGE_TYPES = []string{JPG_IMAGE_FORMAT, PNG_IMAGE_FORMAT, PNG_IMAGE_FORMAT}
 
 type Tile struct {
 	z, x, y int
@@ -170,7 +171,9 @@ func optimizeDatabase(db *sql.DB) error {
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	numCpus := runtime.NumCPU()
+	log.Println("MbtileGo Version:", VERSION, "Number of CPUs:", numCpus)
+	runtime.GOMAXPROCS(numCpus)
 	var xmin, ymin, xmax, ymax float64
 	var zoomlevel, maptype, max_zoomlevel int
 	var filename string
@@ -188,15 +191,21 @@ func main() {
 	flag.Float64Var(&xmax, "xmax", 55.402741, "Maximum longitude")
 	flag.Float64Var(&ymin, "ymin", 25.291090, "Minimum latitude")
 	flag.Float64Var(&ymax, "ymax", 25.292889, "Maximum latitude")
-	flag.StringVar(&filename, "filename", "/path/to/file.mbtile", "Output file to generate")
+	flag.StringVar(&filename, "filename", "ouputFile.mbtile", "Output file to generate")
 	flag.IntVar(&zoomlevel, "zoomlevel", 19, "Zoom level")
 	flag.IntVar(&maptype, "maptype", 0, "0 for Google, 1 for OSM, 2 for mapbox satellite street")
 	flag.IntVar(&max_zoomlevel, "max_zoomlevel", MAX_ZOOM_LEVEL, "Maximum zoomlevel to which tiles should be added")
 	flag.Parse()
 
-	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel, max_zoomlevel)
+	proj := NewProjection(xmin, ymin, xmax, ymax, zoomlevel, max_zoomlevel, maptype)
 	tiles := proj.TileList()
-	log.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", max_zoomlevel, "  Number of tiles ", len(tiles))
+	if len(tiles) == 0 {
+		log.Println("Not enough number of tiles. Please give proper bounds.")
+		os.Exit(1)
+	} else {
+		log.Println("Filename: ", filename, " Zoom level ", zoomlevel, "-", max_zoomlevel, "  Number of tiles ", len(tiles))
+	}
+
 
 	db, err := prepareDatabase(filename)
 	if err != nil {
@@ -246,7 +255,7 @@ type Projection struct {
 	metaData               MetaData
 }
 
-func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel, max_zoomlevel int) *Projection {
+func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel, max_zoomlevel int, maptype int) *Projection {
 	proj := Projection{xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax}
 	for i := zoomlevel; i <= max_zoomlevel; i++ {
 		proj.levels = append(proj.levels, i)
@@ -263,7 +272,7 @@ func NewProjection(xmin, ymin, xmax, ymax float64, zoomlevel, max_zoomlevel int)
 		c = c * 2
 	}
 	bounds := fmt.Sprintf("%f,%f,%f,%f", xmin, ymin, xmax, ymax)
-	proj.metaData = NewMetaData(PNG_IMAGE_FORMAT, zoomlevel, max_zoomlevel, bounds)
+	proj.metaData = NewMetaData(MAP_IMAGE_TYPES[maptype], zoomlevel, max_zoomlevel, bounds)
 	return &proj
 }
 
