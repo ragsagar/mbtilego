@@ -29,7 +29,7 @@ const JPG_EXTENSION = "jpg"
 const PNG_EXTENSION = "png"
 const MBTILE_VERSION = "1.2"
 
-var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://c.tile.openstreetmap.org/{z}/{x}/{y}.png", "http://a.tiles.mapbox.com/v4/rsagar.n724o8le/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicnNhZ2FyIiwiYSI6IjM5OWVlZTVlYzJiYjhmMzAyMGMwMDBiYzA4NjEzMWM3In0.gc0JW6Ddp0RD_yBaaPE1vg"}
+var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://tile.openstreetmap.org/{z}/{x}/{y}.png", "http://a.tiles.mapbox.com/v4/rsagar.n724o8le/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicnNhZ2FyIiwiYSI6IjM5OWVlZTVlYzJiYjhmMzAyMGMwMDBiYzA4NjEzMWM3In0.gc0JW6Ddp0RD_yBaaPE1vg"}
 var MAP_IMAGE_TYPES = []string{JPG_IMAGE_FORMAT, PNG_IMAGE_FORMAT, PNG_IMAGE_FORMAT}
 
 type Tile struct {
@@ -70,10 +70,24 @@ func tileFetcher(inputPipe chan Tile, tilePipe chan Tile, maptype int) {
 	}
 }
 
+func httpGet(tileUrl string) (*http.Response, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", tileUrl, nil)
+	req.Header.Set("User-Agent", "MBTile_Bot/0.1")
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 func fetchTile(z, x, y int, url_format string) Tile {
 	tile := Tile{}
-	tile_url := getTileUrl(z, x, y, url_format)
-	resp, err := http.Get(tile_url)
+	tileUrl := getTileUrl(z, x, y, url_format)
+	resp, err := httpGet(tileUrl)
 	if err != nil {
 		log.Fatal("Error in fetching tile")
 	}
@@ -185,6 +199,7 @@ func main() {
 		sig := <-sigs
 		log.Println("Exit signal received.")
 		log.Println(sig)
+		os.Exit(1)
 	}()
 
 	flag.Float64Var(&xmin, "xmin", 55.397945, "Minimum longitude")
