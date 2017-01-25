@@ -17,7 +17,7 @@ import (
 	"strings"
 	"syscall"
 )
-const VERSION = "0.2.0"
+const VERSION = "0.2.1"
 const DEG_TO_RAD = math.Pi / 180
 const RAD_TO_DEG = 180 / math.Pi
 const MAX_LATITUDE = 85.0511287798
