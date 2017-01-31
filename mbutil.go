@@ -17,7 +17,7 @@ import (
 	"strings"
 	"syscall"
 )
-const VERSION = "0.2.1"
+const VERSION = "0.2.2"
 const DEG_TO_RAD = math.Pi / 180
 const RAD_TO_DEG = 180 / math.Pi
 const MAX_LATITUDE = 85.0511287798
@@ -29,7 +29,7 @@ const JPG_EXTENSION = "jpg"
 const PNG_EXTENSION = "png"
 const MBTILE_VERSION = "1.2"
 
-var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://tile.openstreetmap.org/{z}/{x}/{y}.png", "http://a.tiles.mapbox.com/v4/rsagar.n724o8le/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoicnNhZ2FyIiwiYSI6IjM5OWVlZTVlYzJiYjhmMzAyMGMwMDBiYzA4NjEzMWM3In0.gc0JW6Ddp0RD_yBaaPE1vg"}
+var MAPTYPES = []string{"http://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "http://tile.openstreetmap.org/{z}/{x}/{y}.png", "http://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiYWVyb3Zpc2lvbmtlc3RyZWwiLCJhIjoiY2l5bDhzYTVqMDAxNDJ3bGp1ZHA2cmtiaCJ9.8o3pqTWKiOV8RhjNGFW0rg"}
 var MAP_IMAGE_TYPES = []string{JPG_IMAGE_FORMAT, PNG_IMAGE_FORMAT, PNG_IMAGE_FORMAT}
 
 type Tile struct {
